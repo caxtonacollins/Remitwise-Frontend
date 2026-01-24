@@ -1,7 +1,14 @@
+'use client'
+
+import { useState } from 'react'
+import EmergencyTransferModal from './components/EmergencyTransferModal'
+
 import Link from 'next/link'
 import { ArrowLeft, Send, AlertCircle } from 'lucide-react'
 
 export default function SendMoney() {
+  const [showEmergencyModal, setShowEmergencyModal] = useState(false)
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
@@ -108,7 +115,7 @@ export default function SendMoney() {
               </button>
             </div>
           </form>
-
+9
           {/* Emergency Mode */}
           <div className="mt-8 pt-8 border-t border-gray-200">
             <h3 className="text-lg font-semibold text-gray-900 mb-4">Emergency Transfer</h3>
@@ -117,7 +124,7 @@ export default function SendMoney() {
             </p>
             <button
               className="bg-red-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-red-700 transition"
-              disabled
+              onClick={() => setShowEmergencyModal(true)}
             >
               Emergency Transfer
             </button>
@@ -131,6 +138,13 @@ export default function SendMoney() {
             integrate with anchor platform for fiat on/off-ramps, and connect to smart contracts for automatic split execution.
           </p>
         </div>
+
+
+        {/* emergency transfer modal */}
+        <EmergencyTransferModal
+  open={showEmergencyModal}
+  onClose={() => setShowEmergencyModal(false)}
+/>
       </main>
     </div>
   )
