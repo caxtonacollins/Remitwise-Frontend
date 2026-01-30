@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import React, { useState } from 'react'
 import EmergencyTransferModal from './components/EmergencyTransferModal'
 import AmountCurrencySection from './components/AmountCurrencySection'
 
@@ -60,7 +60,6 @@ export default function SendMoney() {
                 className="w-full px-4 py-3 border border-gray-700 bg-gray-800 text-white rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent mb-4"
                 disabled
               />
-<<<<<<< HEAD
               <p className="text-sm text-gray-400 mb-4">Stellar address of the recipient wallet</p>
               
               {/* Recent Recipients Placeholder */}
@@ -73,7 +72,6 @@ export default function SendMoney() {
                 </div>
               </div>
             </div>
->>>>>>> dce3420 (Amount currency page)
 
             {/* Amount and Currency Section - OUR COMPONENT */}
             <div className="bg-black">
@@ -171,7 +169,6 @@ export default function SendMoney() {
                 <p className="text-xs text-gray-400">
                   <span className="text-green-400 font-semibold">⚡ Fast & Secure:</span> Settles on Stellar network in 3-5 seconds with minimal fees.
                 </p>
-              </div>
               </div>
             </div>
           </div>
