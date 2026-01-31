@@ -14,141 +14,19 @@ import CurrentMoneySplitWidget from '@/components/CurrentMoneySplitWidget'
 import GoalProgress from "@/components/Dashboard/GoalProgress";
 import SplitBar from "@/components/Dashboard/SplitBar";
 import StatCard from "@/components/Dashboard/StatCard";
+
+import SavingsByGoalWidget from "@/components/Dashboard/SavingsByGoalWidget";
 import TransactionHistoryItem, { Transaction } from "@/components/Dashboard/TransactionHistoryItem";
 import QuickActions from "@/components/Dashboard/QuickActions";
 
-const recentTransactions: Transaction[] = [
-  {
-    id: "TX001",
-    type: "Send Money",
-    amount: -500.00,
-    currency: "USDC",
-    counterpartyName: "Maria Santos (Philippines)",
-    counterpartyLabel: "To",
-    date: "2024-01-28 14:32:15",
-    fee: 0.50,
-    status: "Completed"
-  },
-  {
-    id: "TX002",
-    type: "Smart Split",
-    amount: -1200.00,
-    currency: "USDC",
-    counterpartyName: "Smart Split: 4 allocations",
-    counterpartyLabel: "To",
-    date: "2024-01-27 09:15:42",
-    fee: 0.30,
-    status: "Completed"
-  },
-  {
-    id: "TX003",
-    type: "Bill Payment",
-    amount: -85.50,
-    currency: "USDC",
-    counterpartyName: "Manila Electric Company",
-    counterpartyLabel: "To",
-    date: "2024-01-26 16:45:23",
-    fee: 0.10,
-    status: "Completed"
-  },
-  {
-    id: "TX004",
-    type: "Insurance",
-    amount: -25.00,
-    currency: "USDC",
-    counterpartyName: "HealthGuard Insurance Premium",
-    counterpartyLabel: "To",
-    date: "2024-01-25 11:20:05",
-    fee: 0.05,
-    status: "Completed"
-  },
-  {
-    id: "TX005",
-    type: "Savings",
-    amount: -200.00,
-    currency: "USDC",
-    counterpartyName: "Education Fund Goal",
-    counterpartyLabel: "To",
-    date: "2024-01-24 08:55:17",
-    fee: 0.10,
-    status: "Completed"
-  },
-  {
-    id: "TX006",
-    type: "Family Transfer",
-    amount: -150.00,
-    currency: "USDC",
-    counterpartyName: "Carlos Santos (Son)",
-    counterpartyLabel: "To",
-    date: "2024-01-23 19:30:44",
-    fee: 0.15,
-    status: "Completed"
-  },
-  {
-    id: "TX007",
-    type: "Received",
-    amount: 75.00,
-    currency: "USDC",
-    counterpartyName: "Refund from LOBSTR Anchor",
-    counterpartyLabel: "From",
-    date: "2024-01-22 13:15:30",
-    fee: 0.00,
-    status: "Completed"
-  },
-  {
-    id: "TX008",
-    type: "Send Money",
-    amount: -320.00,
-    currency: "USDC",
-    counterpartyName: "Juan Dela Cruz (Philippines)",
-    counterpartyLabel: "To",
-    date: "2024-01-21 10:42:18",
-    fee: 0.40,
-    status: "Pending"
-  },
-  {
-    id: "TX009",
-    type: "Bill Payment",
-    amount: -120.00,
-    currency: "USDC",
-    counterpartyName: "Water District Payment",
-    counterpartyLabel: "To",
-    date: "2024-01-20 15:22:55",
-    fee: 0.00,
-    status: "Failed"
-  },
-  {
-    id: "TX010",
-    type: "Smart Split",
-    amount: -800.00,
-    currency: "USDC",
-    counterpartyName: "Smart Split: 4 allocations",
-    counterpartyLabel: "To",
-    date: "2024-01-19 12:08:33",
-    fee: 0.25,
-    status: "Completed"
-  }
-];
+
+import DashboardHeader from "@/components/Dashboard/DashboardHeader";
 
 export default function Dashboard() {
   return (
     <div className="min-h-screen bg-[#141414]">
       {/* Header */}
-      <header className="bg-(--background) shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex items-center space-x-4">
-            <Link
-              href="/"
-              className="text-(--foreground) hover:text-(--foreground)"
-            >
-              <ArrowLeft className="w-6 h-6" />
-            </Link>
-            <h1 className="text-2xl font-bold text-(--foreground)">
-              Dashboard
-            </h1>
-          </div>
-        </div>
-      </header>
+      <DashboardHeader />
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Stats Overview */}
@@ -198,63 +76,13 @@ export default function Dashboard() {
         </div>
 
         {/* Recent Transactions */}
-        <div
-          className="rounded-xl shadow-md p-6 mb-8"
-          style={{ backgroundImage: "var(--card)" }}
-        >
-          <h2 className="text-xl font-bold text-(--foreground) mb-4">
-            Recent Transactions
-          </h2>
-          <div className="space-y-4">
-            {recentTransactions.map((transaction) => (
-              <TransactionHistoryItem key={transaction.id} transaction={transaction} />
-            ))}
-          </div>
-          <div className="mt-6">
-            <Link
-              href="/transactions"
-              className="text-blue-600 hover:text-blue-700 font-semibold"
-            >
-              View All Transactions →
-            </Link>
-          </div>
+        <div className="mb-8">
+          <RecentTransactionsWidget />
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* Savings Goals Progress */}
-          <div
-            className="rounded-2xl shadow-md p-6 border border-[#FFFFFF14] hover:border-white/30 transition-colors duration-300"
-            style={{ backgroundImage: "var(--card)" }}
-          >
-            <div className="flex items-center gap-2 mb-4">
-              <span>
-                <PiggyBank className="w-6 h-6 text-[var(--accent)]" />
-              </span>
-              <h2 className="text-xl font-bold text-(--foreground)">
-                Savings by Goals
-              </h2>
-            </div>
-            <div className="space-y-4">
-              <GoalProgress
-                name="Emergency Fund"
-                current={331.2}
-                target={720}
-                gradient={{ from: "#B91C1C", to: "#991B1B" }}
-              />
-              <GoalProgress
-                name="Education Fund"
-                current={194}
-                target={550}
-                gradient={{ from: "#991B1B", to: "#7F1D1D" }}
-              />
-              <GoalProgress
-                name="Medical Fund"
-                current={58.9}
-                target={310}
-                gradient={{ from: "#7F1D1D", to: "#5F1515" }}
-              />
-            </div>
-          </div>
+          <SavingsByGoalWidget />
 
           {/* Bills by Type */}
           <div
@@ -301,4 +129,3 @@ export default function Dashboard() {
     </div>
   );
 }
-
