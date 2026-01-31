@@ -9,24 +9,6 @@ import Link from 'next/link'
 import { ArrowLeft, Send, AlertCircle, Zap } from 'lucide-react'
 
 export default function SendMoney() {
-  const [showEmergencyModal, setShowEmergencyModal] = useState(false)
-  const [previewAmount, setPreviewAmount] = useState<number | null>(null)
-  const [previewCurrency, setPreviewCurrency] = useState<string | null>(null)
-
-  const handlePreview = () => {
-    // Handle preview transaction
-    console.log('Preview transaction clicked')
-  }
-
-  const handleSend = (amount: number, currency: string) => {
-    setPreviewAmount(amount)
-    setPreviewCurrency(currency)
-    // Handle send remittance
-    console.log(`Send ${amount} ${currency}`)
-  }
-
-
-export default function SendMoney() {
   const [showEmergencyModal, setShowEmergencyModal] = useState(false);
   const [previewAmount, setPreviewAmount] = useState<number | null>(null);
   const [previewCurrency, setPreviewCurrency] = useState<string | null>(null);

@@ -14,7 +14,7 @@ import CurrentMoneySplitWidget from '@/components/CurrentMoneySplitWidget'
 import GoalProgress from "@/components/Dashboard/GoalProgress";
 import SplitBar from "@/components/Dashboard/SplitBar";
 import StatCard from "@/components/Dashboard/StatCard";
-import TransactionItem from "@/components/Dashboard/TransactionItem";
+
 import SavingsByGoalWidget from "@/components/Dashboard/SavingsByGoalWidget";
 import TransactionHistoryItem, { Transaction } from "@/components/Dashboard/TransactionHistoryItem";
 
@@ -131,25 +131,13 @@ const recentTransactions: Transaction[] = [
   }
 ];
 
+import DashboardHeader from "@/components/Dashboard/DashboardHeader";
+
 export default function Dashboard() {
   return (
     <div className="min-h-screen bg-[#141414]">
       {/* Header */}
-      <header className="bg-(--background) shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex items-center space-x-4">
-            <Link
-              href="/"
-              className="text-(--foreground) hover:text-(--foreground)"
-            >
-              <ArrowLeft className="w-6 h-6" />
-            </Link>
-            <h1 className="text-2xl font-bold text-(--foreground)">
-              Dashboard
-            </h1>
-          </div>
-        </div>
-      </header>
+      <DashboardHeader />
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Stats Overview */}
@@ -266,4 +254,3 @@ export default function Dashboard() {
     </div>
   );
 }
-
