@@ -36,6 +36,11 @@ The frontend includes placeholder pages and components for:
 # Install dependencies
 npm install
 
+# Setup Database
+# 1. Ensure you have `.env` file with `DATABASE_URL="file:./dev.db"`
+# 2. Run initial Prisma migration
+npx prisma migrate dev
+
 # Run development server
 npm run dev
 ```
