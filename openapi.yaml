@@ -16,5 +16,38 @@ info:
 servers:
   - url: /api/v1
     description: v1 base path (local/dev)
-paths: {}
-components: {}
+paths:
+  /health:
+    get:
+      summary: Health check
+      description: Returns system status and connectivity for RPC, DB, and optional anchor.
+      responses:
+        '200':
+          description: All critical dependencies are healthy.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthStatus'
+        '503':
+          description: One or more critical dependencies are unhealthy.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthStatus'
+components:
+  schemas:
+    HealthStatus:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [ok, unhealthy]
+        database:
+          type: string
+          enum: [ok, error]
+        rpc:
+          type: string
+          enum: [ok, error]
+        anchor:
+          type: string
+          enum: [ok, error, skipped]
