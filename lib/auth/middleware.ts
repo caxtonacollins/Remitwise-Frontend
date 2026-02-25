@@ -128,7 +128,7 @@ export function validatedRoute<T extends z.ZodType>(
   };
 }
 
-type NextHandler = (req: NextRequest) => Promise<NextResponse>;
+type NextHandler = (req: NextRequest, address: string) => Promise<NextResponse>;
 
 export function withAuth(handler: NextHandler) {
   return async (req: NextRequest) => {
@@ -149,7 +149,7 @@ export function withAuth(handler: NextHandler) {
         );
       }
     
-    return handler(req);
+    return handler(req, session.address);
   };
 }
 

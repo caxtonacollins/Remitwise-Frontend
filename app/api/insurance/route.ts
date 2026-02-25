@@ -2,7 +2,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { compose, validatedRoute, withAuth } from "@/lib/auth/middleware";
-import { getActivePolicies } from "@/lib/contracts/insurance";
+// import { getActivePolicies } from "@/lib/contracts/insurance";
+import { getActivePolicies } from "@/lib/contracts/insurance-cached";
 import { validateAuth, unauthorizedResponse } from "@/lib/auth";
 
 const billSchema = z.object({
