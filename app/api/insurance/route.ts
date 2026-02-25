@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { getTranslator } from "@/lib/i18n";
 import { getActivePolicies } from "@/lib/contracts/insurance";
 import { validateAuth, unauthorizedResponse } from "@/lib/auth";
 
@@ -14,8 +15,9 @@ export async function GET(request: NextRequest) {
   const owner = searchParams.get("owner");
 
   if (!owner) {
+    const t = getTranslator(request.headers.get("accept-language"));
     return NextResponse.json(
-      { error: "Missing required query parameter: owner" },
+      { error: t("errors.missing_query_owner") },
       { status: 400 }
     );
   }
@@ -27,12 +29,14 @@ export async function GET(request: NextRequest) {
     const err = error as { code?: string };
 
     if (err.code === "INVALID_ADDRESS") {
-      return NextResponse.json({ error: "Invalid Stellar address" }, { status: 400 });
+      const t = getTranslator(request.headers.get("accept-language"));
+      return NextResponse.json({ error: t("errors.invalid_stellar_address") }, { status: 400 });
     }
 
     console.error("[GET /api/insurance]", error);
+    const t = getTranslator(request.headers.get("accept-language"));
     return NextResponse.json(
-      { error: "Failed to fetch policies from contract" },
+      { error: t("errors.failed_fetch_policies") },
       { status: 502 }
     );
   }

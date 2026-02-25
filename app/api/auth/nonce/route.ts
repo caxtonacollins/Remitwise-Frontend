@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { getTranslator } from '@/lib/i18n';
 import crypto from 'crypto';
 import { setNonce } from '@/lib/auth-cache';
 
@@ -8,7 +9,8 @@ export async function GET(request: Request) {
         const address = searchParams.get('address');
 
         if (!address) {
-            return NextResponse.json({ error: 'Address is required' }, { status: 400 });
+            const t = getTranslator(request.headers.get('accept-language'));
+            return NextResponse.json({ error: t('errors.address_required') }, { status: 400 });
         }
 
         // Generate a secure random 32-byte nonce and convert to hex
@@ -19,6 +21,7 @@ export async function GET(request: Request) {
 
         return NextResponse.json({ nonce });
     } catch (error) {
-        return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+        const t = getTranslator(request.headers.get('accept-language'));
+        return NextResponse.json({ error: t('errors.internal_server_error') }, { status: 500 });
     }
 }

@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { getTranslator } from '@/lib/i18n';
 import { Keypair } from '@stellar/stellar-sdk';
 import { getAndClearNonce } from '@/lib/auth-cache';
 
@@ -8,8 +9,9 @@ export async function POST(request: Request) {
     const { address, signature } = body;
 
     if (!address || !signature) {
+      const t = getTranslator(request.headers.get('accept-language'));
       return NextResponse.json(
-        { error: 'Address and signature are required' },
+        { error: t('errors.address_signature_required') },
         { status: 400 }
       );
     }
@@ -17,8 +19,9 @@ export async function POST(request: Request) {
     // Retrieve and clear nonce — returns null if missing or expired
     const nonce = getAndClearNonce(address);
     if (!nonce) {
+      const t = getTranslator(request.headers.get('accept-language'));
       return NextResponse.json(
-        { error: 'Nonce expired or missing. Please request a new nonce.' },
+        { error: t('errors.nonce_expired') },
         { status: 401 }
       );
     }
@@ -33,11 +36,13 @@ export async function POST(request: Request) {
       );
 
       if (!isValid) {
-        return NextResponse.json({ error: 'Invalid signature' }, { status: 401 });
+        const t = getTranslator(request.headers.get('accept-language'));
+        return NextResponse.json({ error: t('errors.invalid_signature') }, { status: 401 });
       }
     } catch {
+      const t = getTranslator(request.headers.get('accept-language'));
       return NextResponse.json(
-        { error: 'Signature verification failed' },
+        { error: t('errors.signature_verification_failed') },
         { status: 401 }
       );
     }
@@ -47,6 +52,7 @@ export async function POST(request: Request) {
     return response;
 
   } catch {
-    return NextResponse.json({ error: 'Bad Request' }, { status: 400 });
+    const t = getTranslator(request.headers.get('accept-language'));
+    return NextResponse.json({ error: t('errors.bad_request') }, { status: 400 });
   }
 }
