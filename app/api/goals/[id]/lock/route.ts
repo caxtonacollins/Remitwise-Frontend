@@ -13,9 +13,10 @@ import { ApiSuccessResponse } from '@/lib/types/savings-goals';
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id: goalId } = await params;
     // Authenticate user
     const session = getSessionFromRequest(request);
     if (!session) {
@@ -30,7 +31,6 @@ export async function POST(
     }
     
     // Validate goal ID from URL params
-    const goalId = params.id;
     const goalIdValidation = validateGoalId(goalId);
     if (!goalIdValidation.isValid) {
       return createValidationError('Invalid goal ID', goalIdValidation.error);

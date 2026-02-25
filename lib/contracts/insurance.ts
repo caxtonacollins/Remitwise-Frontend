@@ -1,10 +1,15 @@
 import {
-    Contract,
-    Horizon,
-    nativeToScVal,
-    scValToNative,
-    xdr,
-  } from "@stellar/stellar-sdk";
+  Address,
+  Contract,
+  nativeToScVal,
+  scValToNative,
+  xdr,
+  TransactionBuilder,
+  Account,
+  BASE_FEE,
+  Networks,
+  SorobanRpc,
+} from "@stellar/stellar-sdk";
   
   // ── Config ──────────────────────────────────────────────────────────────────
   const SOROBAN_RPC_URL =
@@ -27,14 +32,7 @@ import {
   
   // ── RPC Client ───────────────────────────────────────────────────────────────
   function getRpcServer() {
-  const { rpc } = require("@stellar/stellar-sdk") as {
-    rpc: {
-      Server: new (url: string) => {
-        simulateTransaction: (tx: unknown) => Promise<unknown>;
-      };
-    };
-  };
-  return new rpc.Server(SOROBAN_RPC_URL);
+  return new SorobanRpc.Server(SOROBAN_RPC_URL);
 }
   
   // ── Raw contract call helper ─────────────────────────────────────────────────
@@ -42,10 +40,6 @@ import {
     method: string,
     args: xdr.ScVal[]
   ): Promise<xdr.ScVal> {
-    const { Transaction, TransactionBuilder, Account, BASE_FEE } = await import(
-      "@stellar/stellar-sdk"
-    );
-  
     const contract = new Contract(INSURANCE_CONTRACT_ID);
     const server = getRpcServer();
   
@@ -151,4 +145,120 @@ import {
     ]);
   
     return Number(scValToNative(scVal));
+  }
+  
+  /**
+   * Build a transaction to create a new insurance policy.
+   */
+  export async function buildCreatePolicyTx(
+    caller: string,
+    name: string,
+    coverageType: string,
+    monthlyPremium: number,
+    coverageAmount: number
+  ): Promise<string> {
+    const contract = new Contract(INSURANCE_CONTRACT_ID);
+    
+    const callerAddress = new Address(caller);
+    const nameScVal = nativeToScVal(name, { type: "string" });
+    const coverageTypeScVal = nativeToScVal(coverageType, { type: "string" });
+    const monthlyPremiumScVal = nativeToScVal(monthlyPremium, { type: "i128" });
+    const coverageAmountScVal = nativeToScVal(coverageAmount, { type: "i128" });
+  
+    const operation = contract.call(
+      "create_policy",
+      callerAddress.toScVal(),
+      nameScVal,
+      coverageTypeScVal,
+      monthlyPremiumScVal,
+      coverageAmountScVal
+    );
+  
+    const sourceAccount = await loadAccount(caller);
+  
+    const transaction = new TransactionBuilder(sourceAccount, {
+      fee: BASE_FEE,
+      networkPassphrase: NETWORK_PASSPHRASE,
+    })
+      .addOperation(operation)
+      .setTimeout(300)
+      .build();
+  
+    return transaction.toXDR();
+  }
+
+  /**
+   * Build a transaction to pay the premium for a policy.
+   */
+  export async function buildPayPremiumTx(
+    caller: string,
+    policyId: string
+  ): Promise<string> {
+    const contract = new Contract(INSURANCE_CONTRACT_ID);
+    const server = getRpcServer();
+  
+    const callerAddress = new Address(caller);
+    const policyIdScVal = nativeToScVal(policyId, { type: "string" });
+  
+    const operation = contract.call(
+      "pay_premium",
+      callerAddress.toScVal(),
+      policyIdScVal
+    );
+  
+    const sourceAccount = await loadAccount(caller);
+  
+    const transaction = new TransactionBuilder(sourceAccount, {
+      fee: BASE_FEE,
+      networkPassphrase: NETWORK_PASSPHRASE,
+    })
+      .addOperation(operation)
+      .setTimeout(300)
+      .build();
+  
+    return transaction.toXDR();
+  }
+  
+  /**
+   * Build a transaction to deactivate a policy.
+   */
+  export async function buildDeactivatePolicyTx(
+    caller: string,
+    policyId: string
+  ): Promise<string> {
+    const contract = new Contract(INSURANCE_CONTRACT_ID);
+    const server = getRpcServer();
+  
+    const callerAddress = new Address(caller);
+    const policyIdScVal = nativeToScVal(policyId, { type: "string" });
+  
+    const operation = contract.call(
+      "deactivate_policy",
+      callerAddress.toScVal(),
+      policyIdScVal
+    );
+  
+    const sourceAccount = await loadAccount(caller);
+  
+    const transaction = new TransactionBuilder(sourceAccount, {
+      fee: BASE_FEE,
+      networkPassphrase: NETWORK_PASSPHRASE,
+    })
+      .addOperation(operation)
+      .setTimeout(300)
+      .build();
+  
+    return transaction.toXDR();
+  }
+  
+  /**
+   * Helper to load account for transaction building.
+   */
+  async function loadAccount(publicKey: string): Promise<Account> {
+    const server = getRpcServer();
+    try {
+      return await server.getAccount(publicKey);
+    } catch {
+      return new Account(publicKey, "0");
+    }
   }

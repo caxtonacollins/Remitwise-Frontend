@@ -5,14 +5,15 @@ import { validateAuth, unauthorizedResponse } from "@/lib/auth";
 // GET /api/insurance/:id
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   if (!validateAuth(request)) {
     return unauthorizedResponse();
   }
 
   try {
-    const policy = await getPolicy(params.id);
+    const { id } = await params;
+    const policy = await getPolicy(id);
     return NextResponse.json({ policy });
   } catch (error: unknown) {
     if (
