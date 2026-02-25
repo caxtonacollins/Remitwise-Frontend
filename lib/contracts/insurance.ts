@@ -1,8 +1,8 @@
-import { Server, Networks, Account, TransactionBuilder, Operation, BASE_FEE, StrKey } from '@stellar/stellar-sdk'
+import { Horizon, Networks, Account, TransactionBuilder, Operation, BASE_FEE, StrKey } from '@stellar/stellar-sdk'
 
 const HORIZON_URL = process.env.HORIZON_URL || 'https://horizon-testnet.stellar.org'
 const NETWORK_PASSPHRASE = process.env.NETWORK_PASSPHRASE || Networks.TESTNET
-const server = new Server(HORIZON_URL)
+const server = new Horizon.Server(HORIZON_URL)
 
 function validatePublicKey(pk: string) {
   try {
