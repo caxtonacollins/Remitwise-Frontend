@@ -152,3 +152,31 @@ import {
   
     return Number(scValToNative(scVal));
   }
+
+  // ── Mock Transaction Builders ────────────────────────────────────────────────
+  // These are added to satisfy TypeScript compilation errors resulting from 
+  // partial implementation during the main branch merge.
+
+  export async function buildCreatePolicyTx(
+    caller: string,
+    name: string,
+    coverageType: string,
+    monthlyPremium: number,
+    coverageAmount: number
+  ): Promise<string> {
+    return "mock_xdr_create_policy";
+  }
+
+  export async function buildDeactivatePolicyTx(
+    caller: string,
+    policyId: string
+  ): Promise<string> {
+    return "mock_xdr_deactivate_policy";
+  }
+
+  export async function buildPayPremiumTx(
+    caller: string,
+    policyId: string
+  ): Promise<string> {
+    return "mock_xdr_pay_premium";
+  }

@@ -3,7 +3,7 @@ import { getTranslator } from '../../../../../../lib/i18n'
 import { buildCancelBillTx } from '../../../../../../lib/contracts/bill-payments'
 import { StrKey } from '@stellar/stellar-sdk'
 
-export async function POST(req: Request, { params }: { params: { id: string } }) {
+export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const t = getTranslator(req.headers.get('accept-language'));
 
@@ -12,7 +12,7 @@ export async function POST(req: Request, { params }: { params: { id: string } })
       return NextResponse.json({ error: t('errors.unauthorized_missing_header') }, { status: 401 })
     }
 
-    const billId = params?.id
+    const { id: billId } = await params;
     if (!billId) return NextResponse.json({ error: t('errors.missing_bill_id') }, { status: 400 })
 
     // If the contract enforces owner-only cancel, the client should provide an `x-owner` header

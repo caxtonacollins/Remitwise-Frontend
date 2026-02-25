@@ -3,7 +3,7 @@ import { getTranslator } from '../../../../../../lib/i18n'
 import { buildDeactivatePolicyTx } from '../../../../../../lib/contracts/insurance'
 import { StrKey } from '@stellar/stellar-sdk'
 
-export async function POST(req: Request, { params }: { params: { id: string } }) {
+export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const t = getTranslator(req.headers.get('accept-language'));
 
@@ -12,7 +12,7 @@ export async function POST(req: Request, { params }: { params: { id: string } })
       return NextResponse.json({ error: t('errors.unauthorized_missing_header') }, { status: 401 })
     }
 
-    const policyId = params?.id
+    const { id: policyId } = await params;
     if (!policyId) return NextResponse.json({ error: t('errors.missing_policy_id') }, { status: 400 })
 
     // Optional owner-only enforcement can be handled by headers similar to bills
