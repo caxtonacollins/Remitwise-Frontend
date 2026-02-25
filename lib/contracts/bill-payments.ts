@@ -1,10 +1,28 @@
-import { Networks, Account, TransactionBuilder, Operation, BASE_FEE, StrKey, Horizon } from '@stellar/stellar-sdk'
+import {
+  Networks,
+  Account,
+  TransactionBuilder,
+  Operation,
+  BASE_FEE,
+  StrKey,
+  Horizon,
+} from '@stellar/stellar-sdk'
 
-const HORIZON_URL = process.env.HORIZON_URL || 'https://horizon-testnet.stellar.org'
-const NETWORK_PASSPHRASE = process.env.NETWORK_PASSPHRASE || Networks.TESTNET
+import {
+  createValidationError,
+  parseContractError,
+  ContractErrorCode,
+} from '@/lib/errors/contract-errors'
+
+const HORIZON_URL =
+  process.env.HORIZON_URL || 'https://horizon-testnet.stellar.org'
+
+const NETWORK_PASSPHRASE =
+  process.env.NETWORK_PASSPHRASE || Networks.TESTNET
+
 const server = new Horizon.Server(HORIZON_URL)
 
-// ── Bill type ─────────────────────────────────────────────────────────────────
+// ── Bill type ────────────────────────────────────────────────────────────────
 
 export interface Bill {
   id: string
@@ -23,37 +41,49 @@ export interface Bill {
 function validatePublicKey(pk: string) {
   try {
     return StrKey.isValidEd25519PublicKey(pk)
-  } catch (e) {
+  } catch {
     return false
   }
 }
 
 async function loadAccount(accountId: string) {
-  if (!validatePublicKey(accountId)) throw new Error('invalid-account')
-  return await server.loadAccount(accountId)
+  if (!validatePublicKey(accountId)) {
+    throw createValidationError(
+      ContractErrorCode.INVALID_ADDRESS,
+      'Invalid Stellar account address',
+      { contractId: 'bill-payments', metadata: { accountId } }
+    )
+  }
+
+  try {
+    return await server.loadAccount(accountId)
+  } catch (error) {
+    throw parseContractError(error, {
+      contractId: 'bill-payments',
+      method: 'loadAccount',
+    })
+  }
 }
 
 /**
- * Derives a bill status from its dueDate and paid flag.
+ * Derives bill status from dueDate + paid flag.
  */
 function deriveStatus(dueDate: string, paid: boolean): Bill['status'] {
   if (paid) return 'paid'
+
   const due = new Date(dueDate).getTime()
   const now = Date.now()
   const diffDays = (due - now) / (1000 * 60 * 60 * 24)
+
   if (diffDays < 0) return 'overdue'
   if (diffDays <= 3) return 'urgent'
   return 'upcoming'
 }
 
 /**
- * NOTE: The bill_payments Soroban contract is not yet deployed.
- * Until a contract ID is available, reads are served from the mock data set
- * so all API routes work end-to-end today.
- *
- * When the contract is deployed:
- * 1. Set BILL_PAYMENTS_CONTRACT_ID in .env.local
- * 2. Replace the mock implementations below with real SorobanRpc contract reads.
+ * NOTE:
+ * The Soroban contract is not yet deployed.
+ * These reads are currently mocked.
  */
 
 const MOCK_BILLS: Bill[] = [
@@ -102,34 +132,28 @@ const MOCK_BILLS: Bill[] = [
   },
 ]
 
-// ── Read layer ────────────────────────────────────────────────────────────────
+// ── Read Layer ────────────────────────────────────────────────────────────────
 
-/**
- * Returns a single bill by ID for the given owner.
- * Throws 'not-found' if no bill matches.
- */
 export async function getBill(id: string, owner: string): Promise<Bill> {
-  // TODO: replace with contract read when BILL_PAYMENTS_CONTRACT_ID is set
   const bill = MOCK_BILLS.find((b) => b.id === id)
   if (!bill) throw new Error('not-found')
-  return { ...bill, status: deriveStatus(bill.dueDate, bill.paid), owner }
+
+  return {
+    ...bill,
+    status: deriveStatus(bill.dueDate, bill.paid),
+    owner,
+  }
 }
 
-/**
- * Returns all unpaid bills for the given owner.
- */
 export async function getUnpaidBills(owner: string): Promise<Bill[]> {
-  // TODO: replace with contract read when BILL_PAYMENTS_CONTRACT_ID is set
-  return MOCK_BILLS
-    .filter((b) => !b.paid)
-    .map((b) => ({ ...b, status: deriveStatus(b.dueDate, b.paid), owner }))
+  return MOCK_BILLS.filter((b) => !b.paid).map((b) => ({
+    ...b,
+    status: deriveStatus(b.dueDate, b.paid),
+    owner,
+  }))
 }
 
-/**
- * Returns all bills (paid and unpaid) for the given owner.
- */
 export async function getAllBills(owner: string): Promise<Bill[]> {
-  // TODO: replace with contract read when BILL_PAYMENTS_CONTRACT_ID is set
   return MOCK_BILLS.map((b) => ({
     ...b,
     status: deriveStatus(b.dueDate, b.paid),
@@ -137,23 +161,17 @@ export async function getAllBills(owner: string): Promise<Bill[]> {
   }))
 }
 
-/**
- * Returns the sum of all unpaid bill amounts for the given owner.
- */
 export async function getTotalUnpaid(owner: string): Promise<number> {
   const unpaid = await getUnpaidBills(owner)
   return unpaid.reduce((sum, b) => sum + b.amount, 0)
 }
 
-/**
- * Returns all overdue bills for the given owner.
- */
 export async function getOverdueBills(owner: string): Promise<Bill[]> {
   const all = await getAllBills(owner)
   return all.filter((b) => b.status === 'overdue')
 }
 
-// ── Write layer (transaction builders) ───────────────────────────────────────
+// ── Transaction Builders ──────────────────────────────────────────────────────
 
 export async function buildCreateBillTx(
   owner: string,
@@ -163,65 +181,166 @@ export async function buildCreateBillTx(
   recurring: boolean,
   frequencyDays?: number
 ) {
-  if (!validatePublicKey(owner)) throw new Error('invalid-owner')
-  if (!(amount > 0)) throw new Error('invalid-amount')
-  if (recurring && !(frequencyDays && frequencyDays > 0)) throw new Error('invalid-frequency')
-  if (Number.isNaN(Date.parse(dueDate))) throw new Error('invalid-dueDate')
-
-  const acctResp = await loadAccount(owner)
-  const source = new Account(owner, acctResp.sequence)
-
-  const txBuilder = new TransactionBuilder(source, {
-    fee: BASE_FEE,
-    networkPassphrase: NETWORK_PASSPHRASE,
-  })
-
-  txBuilder.addOperation(Operation.manageData({ name: 'bill:name', value: name.slice(0, 64) }))
-  txBuilder.addOperation(Operation.manageData({ name: 'bill:amount', value: String(amount) }))
-  txBuilder.addOperation(Operation.manageData({ name: 'bill:dueDate', value: new Date(dueDate).toISOString() }))
-  txBuilder.addOperation(Operation.manageData({ name: 'bill:recurring', value: recurring ? '1' : '0' }))
-  if (recurring && frequencyDays) {
-    txBuilder.addOperation(Operation.manageData({ name: 'bill:frequencyDays', value: String(frequencyDays) }))
+  if (!validatePublicKey(owner)) {
+    throw createValidationError(
+      ContractErrorCode.INVALID_ADDRESS,
+      'Invalid owner address',
+      { contractId: 'bill-payments', method: 'buildCreateBillTx', metadata: { owner } }
+    )
   }
 
-  const tx = txBuilder.setTimeout(300).build()
-  return tx.toXDR()
+  if (!(amount > 0)) {
+    throw createValidationError(
+      ContractErrorCode.INVALID_AMOUNT,
+      'Amount must be greater than zero',
+      { contractId: 'bill-payments', method: 'buildCreateBillTx', metadata: { amount } }
+    )
+  }
+
+  if (recurring && !(frequencyDays && frequencyDays > 0)) {
+    throw createValidationError(
+      ContractErrorCode.INVALID_FREQUENCY,
+      'Frequency days must be greater than zero for recurring bills',
+      { contractId: 'bill-payments', method: 'buildCreateBillTx', metadata: { frequencyDays } }
+    )
+  }
+
+  if (Number.isNaN(Date.parse(dueDate))) {
+    throw createValidationError(
+      ContractErrorCode.INVALID_DUE_DATE,
+      'Invalid due date format',
+      { contractId: 'bill-payments', method: 'buildCreateBillTx', metadata: { dueDate } }
+    )
+  }
+
+  try {
+    const acctResp = await loadAccount(owner)
+    const source = new Account(owner, acctResp.sequence)
+
+    const txBuilder = new TransactionBuilder(source, {
+      fee: BASE_FEE,
+      networkPassphrase: NETWORK_PASSPHRASE,
+    })
+
+    txBuilder.addOperation(
+      Operation.manageData({ name: 'bill:name', value: name.slice(0, 64) })
+    )
+
+    txBuilder.addOperation(
+      Operation.manageData({ name: 'bill:amount', value: String(amount) })
+    )
+
+    txBuilder.addOperation(
+      Operation.manageData({
+        name: 'bill:dueDate',
+        value: new Date(dueDate).toISOString(),
+      })
+    )
+
+    txBuilder.addOperation(
+      Operation.manageData({
+        name: 'bill:recurring',
+        value: recurring ? '1' : '0',
+      })
+    )
+
+    if (recurring && frequencyDays) {
+      txBuilder.addOperation(
+        Operation.manageData({
+          name: 'bill:frequencyDays',
+          value: String(frequencyDays),
+        })
+      )
+    }
+
+    const tx = txBuilder.setTimeout(300).build()
+    return tx.toXDR()
+  } catch (error) {
+    throw parseContractError(error, {
+      contractId: 'bill-payments',
+      method: 'buildCreateBillTx',
+    })
+  }
 }
 
 export async function buildPayBillTx(caller: string, billId: string) {
-  if (!validatePublicKey(caller)) throw new Error('invalid-caller')
-  if (!billId) throw new Error('invalid-billId')
+  if (!validatePublicKey(caller)) {
+    throw createValidationError(
+      ContractErrorCode.INVALID_ADDRESS,
+      'Invalid caller address',
+      { contractId: 'bill-payments', method: 'buildPayBillTx', metadata: { caller } }
+    )
+  }
 
-  const acctResp = await loadAccount(caller)
-  const source = new Account(caller, acctResp.sequence)
+  if (!billId) {
+    throw createValidationError(
+      ContractErrorCode.INVALID_ADDRESS,
+      'Bill ID is required',
+      { contractId: 'bill-payments', method: 'buildPayBillTx', metadata: { billId } }
+    )
+  }
 
-  const txBuilder = new TransactionBuilder(source, {
-    fee: BASE_FEE,
-    networkPassphrase: NETWORK_PASSPHRASE,
-  })
+  try {
+    const acctResp = await loadAccount(caller)
+    const source = new Account(caller, acctResp.sequence)
 
-  txBuilder.addOperation(Operation.manageData({ name: `bill:pay:${billId}`, value: '1' }))
+    const tx = new TransactionBuilder(source, {
+      fee: BASE_FEE,
+      networkPassphrase: NETWORK_PASSPHRASE,
+    })
+      .addOperation(
+        Operation.manageData({ name: `bill:pay:${billId}`, value: '1' })
+      )
+      .setTimeout(300)
+      .build()
 
-  const tx = txBuilder.setTimeout(300).build()
-  return tx.toXDR()
+    return tx.toXDR()
+  } catch (error) {
+    throw parseContractError(error, {
+      contractId: 'bill-payments',
+      method: 'buildPayBillTx',
+    })
+  }
 }
 
 export async function buildCancelBillTx(caller: string, billId: string) {
-  if (!validatePublicKey(caller)) throw new Error('invalid-caller')
-  if (!billId) throw new Error('invalid-billId')
+  if (!validatePublicKey(caller)) {
+    throw createValidationError(
+      ContractErrorCode.INVALID_ADDRESS,
+      'Invalid caller address',
+      { contractId: 'bill-payments', method: 'buildCancelBillTx', metadata: { caller } }
+    )
+  }
 
-  const acctResp = await loadAccount(caller)
-  const source = new Account(caller, acctResp.sequence)
+  if (!billId) {
+    throw createValidationError(
+      ContractErrorCode.INVALID_ADDRESS,
+      'Bill ID is required',
+      { contractId: 'bill-payments', method: 'buildCancelBillTx', metadata: { billId } }
+    )
+  }
 
-  const txBuilder = new TransactionBuilder(source, {
-    fee: BASE_FEE,
-    networkPassphrase: NETWORK_PASSPHRASE,
-  })
+  try {
+    const acctResp = await loadAccount(caller)
+    const source = new Account(caller, acctResp.sequence)
 
-  txBuilder.addOperation(Operation.manageData({ name: `bill:cancel:${billId}`, value: '1' }))
+    const tx = new TransactionBuilder(source, {
+      fee: BASE_FEE,
+      networkPassphrase: NETWORK_PASSPHRASE,
+    })
+      .addOperation(
+        Operation.manageData({ name: `bill:cancel:${billId}`, value: '1' })
+      )
+      .setTimeout(300)
+      .build()
 
-  const tx = txBuilder.setTimeout(300).build()
-  return tx.toXDR()
+    return tx.toXDR()
+  } catch (error) {
+    throw parseContractError(error, {
+      contractId: 'bill-payments',
+      method: 'buildCancelBillTx',
+    })
+  }
 }
 
 export default {
