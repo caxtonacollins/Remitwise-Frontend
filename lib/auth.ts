@@ -1,4 +1,18 @@
-import { NextRequest } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
+import { getSession } from "./session";
+
+/**
+ * Structured API error for consistent error responses.
+ */
+export class ApiError extends Error {
+  constructor(
+    public status: number,
+    message: string,
+  ) {
+    super(message);
+    this.name = "ApiError";
+  }
+}
 
 /**
  * Validates the Authorization header.
@@ -22,34 +36,66 @@ export function unauthorizedResponse() {
   });
 }
 
-export class ApiError extends Error {
-  constructor(public status: number, message: string) {
-    super(message);
-    this.name = 'ApiError';
-  }
-}
-
-export function withAuth(handler: (req: NextRequest, session: string) => Promise<Response> | Response) {
-  return async (req: NextRequest) => {
+/**
+ * Higher-order function that wraps a route handler with auth validation.
+ * Supports both Bearer token auth and session-based auth from cookies.
+ * 
+ * Usage:
+ *   async function handler(req: NextRequest, session: string) { ... }
+ *   export const GET = withAuth(handler);
+ */
+export function withAuth(
+  handler: (request: NextRequest, session: string) => Promise<Response> | Response,
+) {
+  return async (request: NextRequest): Promise<Response> => {
     try {
-      // Basic fallback since this repo has mismatched auth flows.
-      // We'll mimic validateAuth checking the header.
-      const authHeader = req.headers.get("authorization") ?? "";
-      const token = authHeader.startsWith("Bearer ") ? authHeader.slice(7).trim() : null;
-      
-      const sessionHeader = req.headers.get('x-user') ?? req.headers.get('x-stellar-public-key');
-      const session = sessionHeader || token;
+      // Try Bearer token auth first
+      const authHeader = request.headers.get("authorization") ?? "";
+      const token = authHeader.startsWith("Bearer ")
+        ? authHeader.slice(7).trim()
+        : null;
 
-      if (!session) {
-        return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers: { "Content-Type": "application/json" } });
+      // Check if token is valid (either matches AUTH_SECRET or is a valid session)
+      if (token && token === process.env.AUTH_SECRET) {
+        return await handler(request, token);
       }
 
-      return await handler(req, session);
+      // Check for session headers (backward compatibility)
+      const sessionHeader = request.headers.get('x-user') ?? request.headers.get('x-stellar-public-key');
+      if (sessionHeader) {
+        return await handler(request, sessionHeader);
+      }
+
+      // Finally, try cookie-based session
+      try {
+        const sessionData = await getSession();
+        if (sessionData?.address) {
+          return await handler(request, sessionData.address);
+        }
+      } catch (sessionError) {
+        // Session error, continue to unauthorized response
+        console.debug("Session retrieval failed:", sessionError);
+      }
+
+      // No valid authentication found
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401,
+        headers: { "Content-Type": "application/json" },
+      });
     } catch (error) {
       if (error instanceof ApiError) {
-        return new Response(JSON.stringify({ error: error.message }), { status: error.status, headers: { "Content-Type": "application/json" } });
+        return new Response(JSON.stringify({ error: error.message }), {
+          status: error.status,
+          headers: { "Content-Type": "application/json" },
+        });
       }
-      return new Response(JSON.stringify({ error: "Internal Server Error" }), { status: 500, headers: { "Content-Type": "application/json" } });
+
+      // Log unexpected errors but don't expose details
+      console.error("Route handler error:", error);
+      return new Response(JSON.stringify({ error: "Internal server error" }), {
+        status: 500,
+        headers: { "Content-Type": "application/json" },
+      });
     }
   };
 }

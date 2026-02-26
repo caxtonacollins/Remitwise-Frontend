@@ -54,3 +54,50 @@ export async function GET(request: NextRequest) {
         );
     }
 }
+
+/**
+ * POST /api/auth/nonce
+ * Alternative method to generate a nonce (for backward compatibility)
+ * 
+ * Body:
+ * - publicKey: Stellar address requesting the nonce
+ */
+export async function POST(request: NextRequest) {
+    try {
+        const { publicKey } = await request.json();
+        const t = getTranslator(request.headers.get('accept-language'));
+
+        if (!publicKey) {
+            return NextResponse.json(
+                { error: t('errors.address_required') },
+                { status: 400 }
+            );
+        }
+
+        // Validate Stellar address format
+        if (!/^G[A-Z0-9]{55}$/.test(publicKey)) {
+            return NextResponse.json(
+                { error: t('errors.invalid_address_format') },
+                { status: 400 }
+            );
+        }
+
+        // Generate a random nonce
+        const nonce = randomBytes(32).toString('hex');
+
+        // Store nonce with 5 minute expiration
+        storeNonce(publicKey, nonce);
+
+        return NextResponse.json({ 
+            nonce,
+            expiresAt: new Date(Date.now() + 5 * 60 * 1000).toISOString()
+        });
+    } catch (error) {
+        console.error('Error generating nonce:', error);
+        const t = getTranslator(request.headers.get('accept-language'));
+        return NextResponse.json(
+            { error: t('errors.internal_server_error') },
+            { status: 500 }
+        );
+    }
+}
