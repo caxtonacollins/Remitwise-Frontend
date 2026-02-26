@@ -3,10 +3,12 @@ import path from 'path';
 
 export default defineConfig({
   testDir: './tests/e2e',
+
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
   workers: process.env.CI ? 1 : undefined,
+
   reporter: 'html',
 
   use: {
@@ -30,12 +32,20 @@ export default defineConfig({
     reuseExistingServer: !process.env.CI,
     timeout: 120 * 1000,
 
-    // 🔥 THIS FIXES YOUR ISSUE
+    // Ensure correct working directory in CI
     cwd: path.resolve(__dirname),
+
+    // 🔥 Critical: Inject required environment variables for CI
     env: {
+      DATABASE_URL: 'file:./ci.db', // Required for Prisma in CI
       SESSION_PASSWORD:
         'supersecurelongsessionpasswordatleast32characters!!',
-      AUTH_SECRET: 'test-secret-for-local-dev-only',
+      AUTH_SECRET: 'ci-test-secret',
+
+      // Optional but safe defaults for tests
+      NEXT_PUBLIC_APP_URL: 'http://localhost:3000',
+      STELLAR_NETWORK: 'testnet',
+      SOROBAN_RPC_URL: 'https://soroban-testnet.stellar.org',
     },
   },
 });

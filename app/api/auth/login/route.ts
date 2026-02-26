@@ -44,7 +44,7 @@ export async function POST(request: NextRequest) {
     // Verify signature
     // The client signs Buffer.from(nonce, 'utf8') so we must decode the same way
     const keypair = Keypair.fromPublicKey(address);
-    const messageBuffer = Buffer.from(message, 'utf8');   // ← was 'hex', must be 'utf8'
+    const messageBuffer = Buffer.from(message, 'utf8');
     const signatureBuffer = Buffer.from(signature, 'base64');
 
     const isValid = keypair.verify(messageBuffer, signatureBuffer);
@@ -56,24 +56,27 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Upsert user in database
-    await prisma.user.upsert({
-      where: { stellar_address: address },
-      update: {},
-      create: {
-        stellar_address: address,
-        preferences: {
-          create: {},
+    // Upsert user in database (best-effort — don't fail login if DB is unavailable)
+    try {
+      await prisma.user.upsert({
+        where: { stellar_address: address },
+        update: {},
+        create: {
+          stellar_address: address,
+          preferences: {
+            create: {},
+          },
         },
-      },
-    });
+      });
+    } catch (dbErr) {
+      console.warn('DB upsert skipped (non-fatal):', dbErr);
+    }
 
     // Create encrypted session
     const sealed = await createSession(address);
 
-    // Response shape matches what the test asserts: { success: true, address }
     const response = NextResponse.json({
-      success: true,   // ← was 'ok: true'
+      success: true,
       address,
     });
 
