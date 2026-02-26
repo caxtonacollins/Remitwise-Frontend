@@ -1,11 +1,11 @@
 import {
+  Horizon,
   Networks,
   Account,
   TransactionBuilder,
   Operation,
   BASE_FEE,
   StrKey,
-  Horizon,
 } from '@stellar/stellar-sdk'
 
 import {

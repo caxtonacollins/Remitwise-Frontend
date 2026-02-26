@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { setNonce } from "@/lib/auth-cache";
+import { storeNonce } from "@/lib/auth/nonce-store";
 import { randomBytes } from "crypto";
 
 export async function POST(request: NextRequest) {
@@ -17,7 +17,7 @@ export async function POST(request: NextRequest) {
   const nonce = nonceBuffer.toString("hex");
 
   // Store nonce in cache for later verification
-  setNonce(publicKey, nonce);
+  storeNonce(publicKey, nonce);
 
   return NextResponse.json({ nonce });
 }

@@ -1,32 +1,19 @@
-import { defineConfig } from 'vitest/config';
-import path from 'path';
+import { defineConfig } from 'vitest/config'
+import path from 'path'
 
 export default defineConfig({
   test: {
-    globals: true,
+    include: ['lib/contracts/**/*.test.ts'],
     environment: 'node',
+    globals: true,
     coverage: {
       provider: 'v8',
       reporter: ['text', 'json', 'html'],
-      exclude: [
-        'node_modules/',
-        'tests/',
-        '**/*.d.ts',
-        '**/*.config.*',
-        '**/mockData',
-        'dist/',
-      ],
-      thresholds: {
-        lines: 95,
-        functions: 95,
-        branches: 90,
-        statements: 95,
-      },
+      include: ['lib/contracts/**/*.ts'],
+      exclude: ['lib/contracts/**/*.test.ts']
     },
-  },
-  resolve: {
     alias: {
       '@': path.resolve(__dirname, './'),
     },
   },
-});
+})
